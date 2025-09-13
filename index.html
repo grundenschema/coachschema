@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Coach-scheman</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f8f9fa; }
+    h1, h2 { color: #2c3e50; }
+    button { margin:5px; padding:10px 15px; font-size:16px; cursor:pointer; border:none; border-radius:5px; background-color:#3498db; color:white; }
+    button:hover { background-color:#2980b9; }
+    .event { margin:5px 0; padding:5px 10px; border-left:5px solid #3498db; background-color:#ecf0f1; border-radius:3px; }
+    #schedule-view { display:none; margin-top:20px; }
+    #back-btn { margin-bottom: 10px; background-color:#e74c3c; }
+    #back-btn:hover { background-color:#c0392b; }
+  </style>
+</head>
+<body>
+  <h1>Välj coach</h1>
+
+  <!-- Första vyn: coach-lista -->
+  <div id="coaches-view">
+    <div id="coaches"></div>
+  </div>
+
+  <!-- Andra vyn: schema -->
+  <div id="schedule-view">
+    <button id="back-btn" onclick="tillbaka()">← Tillbaka</button>
+    <div id="schedule"></div>
+  </div>
+
+  <script>
+    const jsonUrl = 'https://script.google.com/macros/s/AKfycbxmg2R0jW7S7i6VI7GXmEMBiCcALSKnR7pJPyh8xaBYwgHEKbI2sFQbltqwk71fth1d/exec';
+    let masterData = [];
+
+    // Hämta data från Web App
+    fetch(jsonUrl)
+      .then(res => res.json())
+      .then(data => {
+        masterData = data.map(r => {
+          const newRow = {};
+          for (let key in r) newRow[key.trim()] = r[key] ? r[key].trim() : '';
+          return newRow;
+        });
+        visaCoacher();
+      })
+      .catch(err => {
+        console.error("Fel vid hämtning av data:", err);
+        document.getElementById('coaches').innerHTML = '<p>Det gick inte att hämta schemat.</p>';
+      });
+
+    // Visa coach-knappar
+    function visaCoacher(){
+      const container = document.getElementById('coaches');
+      const coachSet = new Set();
+      masterData.forEach(r => {
+        if(r.Coach) r.Coach.split(',').forEach(c => coachSet.add(c.trim()));
+      });
+      container.innerHTML = '';
+      coachSet.forEach(coach => {
+        const btn = document.createElement('button');
+        btn.textContent = coach;
+        btn.onclick = () => visaSchema(coach);
+        container.appendChild(btn);
+      });
+    }
+
+    // Visa schema för vald coach
+    function visaSchema(coach){
+      document.getElementById('coaches-view').style.display = 'none';
+      document.getElementById('schedule-view').style.display = 'block';
+
+      const scheduleDiv = document.getElementById('schedule');
+      scheduleDiv.innerHTML = `<h2>${coach}</h2>`;
+      const events = masterData.filter(r => r.Coach && r.Coach.split(',').map(c=>c.trim()).includes(coach));
+      if(events.length === 0){
+        scheduleDiv.innerHTML += '<p>Inga aktiviteter denna vecka.</p>';
+        return;
+      }
+      events.forEach(ev => {
+        const div = document.createElement('div');
+        div.className = 'event';
+        div.textContent = `${ev.Dag}: ${ev.Start}–${ev.Slut} ${ev.Aktivitet} - ${ev.Deltagare}`;
+        scheduleDiv.appendChild(div);
+      });
+    }
+
+    // Tillbaka till coach-listan
+    function tillbaka(){
+      document.getElementById('schedule-view').style.display = 'none';
+      document.getElementById('coaches-view').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
